@@ -197,19 +197,22 @@ const choiceFile = (e) => {
   }
 };
 
-function resizeImage(imageData) {
+async function resizeImage(imageData) {
   const img = new Image();
-  img.onload = () => {
-    const aspectRatio = img.width / img.height;
-    const newWidth = 134;
-    const newHeight = newWidth / aspectRatio;
-    resizeCanvas.value.width = newWidth;
-    resizeCanvas.value.height = newHeight;
-    const ctx = resizeCanvas.value.getContext("2d");
-    ctx.drawImage(img, 0, 0, newWidth, newHeight);
-    enemyImage.value.src = resizeCanvas.value.toDataURL("image/png");
-  };
   img.src = imageData;
+  await new Promise((resolve) => {
+    img.onload = () => {
+      resolve();
+    };
+  });
+  const aspectRatio = img.width / img.height;
+  const newWidth = 134;
+  const newHeight = newWidth / aspectRatio;
+  resizeCanvas.value.width = newWidth;
+  resizeCanvas.value.height = newHeight;
+  const ctx = resizeCanvas.value.getContext("2d");
+  ctx.drawImage(img, 0, 0, newWidth, newHeight);
+  enemyImage.value.src = resizeCanvas.value.toDataURL("image/png");
 }
 
 onMounted(() => {
