@@ -186,18 +186,29 @@ function dist(e0, e1) {
   return Math.sqrt(Math.abs(e0.x - e1.x) ** 2 + Math.abs(e0.y - e1.y) ** 2);
 }
 
-const choiceFile = (e) => {
+const choiceEnemyFile = (e) => {
   const file = e.target.files[0];
   if (file) {
     const reader = new FileReader();
     reader.onload = () => {
-      enemyImage.value.src = resizeImage(reader.result);
+      resizeImage(reader.result, enemyImage);
     };
     reader.readAsDataURL(file);
   }
 };
 
-async function resizeImage(imageData) {
+const choiceShipFile = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resizeImage(reader.result, shipImage);
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+async function resizeImage(imageData, targetImage) {
   const img = new Image();
   img.src = imageData;
   await new Promise((resolve) => {
@@ -212,7 +223,7 @@ async function resizeImage(imageData) {
   resizeCanvas.value.height = newHeight;
   const ctx = resizeCanvas.value.getContext("2d");
   ctx.drawImage(img, 0, 0, newWidth, newHeight);
-  enemyImage.value.src = resizeCanvas.value.toDataURL("image/png");
+  targetImage.value.src = resizeCanvas.value.toDataURL("image/png");
 }
 
 onMounted(() => {
@@ -238,14 +249,24 @@ onMounted(() => {
         <p class="text-center">Enemy Image</p>
         <input
           type="file"
-          v-on:change="choiceFile"
+          v-on:change="choiceEnemyFile"
           class="file-input w-full max-w-xs"
         />
         <canvas ref="resizeCanvas" class="hidden"></canvas>
         <img ref="back" src="/images/back.png" class="hidden" />
-        <img ref="shipImage" src="/images/ship.png" class="hidden" />
         <div class="flex justify-center">
           <img ref="enemyImage" src="/images/enemy.png" />
+        </div>
+      </div>
+      <div class="border rounded-md m-2">
+        <p class="text-center">Ship Image</p>
+        <input
+          type="file"
+          v-on:change="choiceShipFile"
+          class="file-input w-full max-w-xs"
+        />
+        <div class="flex justify-center">
+          <img ref="shipImage" src="/images/ship.png" />
         </div>
       </div>
       <div class="border rounded-md m-2">
