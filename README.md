@@ -1,70 +1,56 @@
-# Nuxt 3 Minimal Starter
+# Penta Game Shooting
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+これは、[Nuxt 3](https://nuxt.com/) で作成されたシンプルな2Dシューティングゲームです。
 
-## Setup
+マウス操作で自機を動かし、敵を倒してハイスコアを目指します。
+また、敵や自機の画像を自分の好きな画像にカスタマイズする機能も備えています。
 
-Make sure to install the dependencies:
+## 主な機能
+
+- マウス追従による自機の移動とクリックによる弾の発射
+- 敵の自動出現と攻撃
+- 敵を倒した際のスコア加算機能
+- スコアランキング表示
+- 敵と自機の画像をアップロードして変更する機能
+
+## 使用技術
+
+- [Nuxt 3](https://nuxt.com/)
+- [Vue 3](https://vuejs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [daisyUI](https://daisyui.com/)
+
+## セットアップ
+
+依存関係をインストールします:
 
 ```bash
 # npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
 ```
 
-## Development Server
+## 開発サーバー
 
-Start the development server on `http://localhost:3000`:
+開発サーバーを `http://localhost:3000` で起動します:
 
 ```bash
 # npm
 npm run dev
-
-# pnpm
-pnpm run dev
-
-# yarn
-yarn dev
 ```
 
-## Production
+## ゲームの遊び方
 
-Build the application for production:
+1.  画面中央の **"Game Start"** ボタンをクリックしてゲームを開始します。
+2.  マウスカーソルを動かすと、自機が追従します。
+3.  マウスをクリックすると、自機から弾が発射されます。
+4.  敵や敵の弾に当たるとゲームオーバーです。
+5.  倒した敵の数に応じてスコアが加算されます。
 
-```bash
-# npm
-npm run build
+## 画像のカスタマイズ
 
-# pnpm
-pnpm run build
+ゲーム画面の右側にあるメニューから、敵と自機の画像を自由に変更できます。
 
-# yarn
-yarn build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm run preview
-
-# yarn
-yarn preview
-```
-
-## Custom Images
-
-The game allows you to upload your own images for both the enemy and the ship.
-Use the file inputs on the right side of the game screen to select images from
-your computer. Uploaded images are resized automatically and used during the
-game.
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+1.  **"Enemy Image"** または **"Ship Image"** の下にあるファイル選択ボタンをクリックします。
+2.  お使いのコンピュータから画像ファイルを選択します。
+3.  選択した画像がゲームに反映されます。
