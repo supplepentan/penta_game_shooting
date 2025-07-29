@@ -60,4 +60,11 @@ pnpm run preview
 yarn preview
 ```
 
+## Custom Images
+
+The game allows you to upload your own images for both the enemy and the ship.
+Use the file inputs on the right side of the game screen to select images from
+your computer. Uploaded images are resized automatically and used during the
+game.
+
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
