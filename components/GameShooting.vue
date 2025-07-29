@@ -104,6 +104,7 @@ let count = 0; // 敵出現用カウンタ
 let interval = 50; // 出現頻度
 let timerId; // タイマー
 let bullets = []; // 弾丸のリスト
+let bombEffect = 0; // ボムエフェクト用カウンタ
 let enemies = []; // 敵のリスト
 const stars = []; // 星のリスト
 const score = ref(0); // スコア
@@ -124,8 +125,12 @@ const gameStart = () => {
   window.onpointermove = (e) => {
     ship.move(e.clientX, e.clientY); // マウス移動⇒自機を移動
   };
-  window.onpointerdown = (e) => {
-    ship.shoot(); // マウス押下⇒弾丸発射
+  window.onclick = (e) => {
+    ship.shoot(); // マウス左クリック⇒弾丸発射
+  };
+  window.oncontextmenu = (e) => {
+    e.preventDefault(); // 右クリックメニューを無効化
+    bomb(); // ボムを発動
   };
   timerId = setInterval(tick, 50); // タイマー開始
   for (let i = 0; i < 50; i++) {
@@ -138,6 +143,11 @@ function tick() {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, 600, 600);
   ctx.drawImage(back.value, 0, 0);
+  if (bombEffect > 0) {
+    bombEffect--;
+    ctx.fillStyle = `rgba(255, 255, 255, ${bombEffect / 10})`;
+    ctx.fillRect(0, 0, 600, 600);
+  }
   stars.forEach((s) => s.tick()); // 星の移動
   ship.tick();
   if (count % interval == 0) {
@@ -174,6 +184,12 @@ function tick() {
     rearrangementScoreList();
     isButtonHidden.value = false;
   }
+}
+function bomb() {
+  const prevNum = enemies.length;
+  enemies = []; // 全ての敵を消去
+  score.value += prevNum; // スコアを加算
+  bombEffect = 10; // ボムエフェクトを設定
 }
 // scoreListの更新
 function rearrangementScoreList() {
