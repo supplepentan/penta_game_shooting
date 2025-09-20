@@ -1,65 +1,80 @@
 <script setup>
+const CANVAS_SIZE = 600;
+const BULLET_RADIUS = 5;
+const STAR_COUNT = 50;
+const BOMB_FLASH_FRAMES = 10;
+
 class Star {
-  // 星クラス
   constructor() {
-    this.x = Math.random() * 600; // x座標
-    this.y = Math.random() * 600; // y座標
-    this.r = Math.random() * 5 + 1; // 半径
+    this.x = Math.random() * CANVAS_SIZE;
+    this.y = Math.random() * CANVAS_SIZE;
+    this.r = Math.random() * 5 + 1;
   }
+
   tick() {
-    this.y += this.r; // 下に移動
-    if (this.y > 600) {
-      // 画面下部にきたら上へ移動
-      this.y -= 600;
+    this.y += this.r;
+    if (this.y > CANVAS_SIZE) {
+      this.y -= CANVAS_SIZE;
     }
     drawCircle(this.x, this.y, this.r, "#888800");
   }
 }
 
 class Ship {
-  // 自機クラス
   constructor() {
     this.img = shipImage.value;
-    this.x = 300;
-    this.y = 500;
+    this.x = CANVAS_SIZE / 2;
+    this.y = CANVAS_SIZE - 100;
     this.sx = 0;
     this.sy = 0;
   }
+
   move(mouseX, mouseY) {
-    this.sx = (mouseX - this.x) / 10; // マウスx方向へ移動
-    this.sy = (mouseY - this.y) / 10; // マウスy方向へ移動
+    this.sx = (mouseX - this.x) / 10;
+    this.sy = (mouseY - this.y) / 10;
   }
-  tick() {
-    this.x += this.sx; // 速度sxを座標xに反映
-    this.y += this.sy; // 速度syを座標yに反映
-    ctx.drawImage(this.img, this.x - 50, this.y - 50);
+
+  tick(bombIntensity = 0) {
+    this.x += this.sx;
+    this.y += this.sy;
+    if (!ctx) {
+      return;
+    }
+    if (bombIntensity > 0) {
+      drawShipGlow(this, bombIntensity);
+    }
+    if (this.img) {
+      ctx.drawImage(this.img, this.x - 50, this.y - 50);
+    }
   }
+
   shoot() {
-    bullets.push(new Bullet(this.x, this.y, 0, -25, true)); // 発射
+    bullets.push(new Bullet(this.x, this.y, 0, -25, true));
   }
 }
 
 class Enemy {
-  // 敵クラス
   constructor() {
     this.img = enemyImage.value;
-    this.x = Math.random() * 400 + 100; // x座標
-    this.y = 0; // y座標
-    this.sx = Math.random() * 5 - 2.5; // x方向初速
-    this.sy = Math.random() * 15 + 15; // y方向初速
+    this.x = Math.random() * 400 + 100;
+    this.y = 0;
+    this.sx = Math.random() * 5 - 2.5;
+    this.sy = Math.random() * 15 + 15;
     this.shoot = false;
   }
-  tick() {
-    this.sy -= 1; // 速度を減らす
-    this.x += this.sx; // 速度sxを座標xに反映
-    this.y += this.sy; // 速度syを座標yに反映
-    ctx.drawImage(this.img, this.x - 50, this.y - 50);
 
-    if (this.shoot == false && this.sy < 0) {
-      // 速度が上向きになったタイミングで弾丸発射
-      let theta = Math.atan2(ship.y - this.y, ship.x - this.x);
-      let sx = Math.cos(theta) * 10;
-      let sy = Math.sin(theta) * 10;
+  tick() {
+    this.sy -= 1;
+    this.x += this.sx;
+    this.y += this.sy;
+    if (ctx && this.img) {
+      ctx.drawImage(this.img, this.x - 50, this.y - 50);
+    }
+
+    if (!this.shoot && this.sy < 0 && ship) {
+      const theta = Math.atan2(ship.y - this.y, ship.x - this.x);
+      const sx = Math.cos(theta) * 10;
+      const sy = Math.sin(theta) * 10;
       bullets.push(new Bullet(this.x, this.y, sx, sy, false));
       this.shoot = true;
     }
@@ -67,23 +82,25 @@ class Enemy {
 }
 
 class Bullet {
-  // 弾丸クラス
   constructor(x, y, sx, sy, isShip) {
     this.x = x;
     this.y = y;
     this.sx = sx;
     this.sy = sy;
-    this.isShip = isShip; // 自機か否か
+    this.isShip = isShip;
   }
+
   tick() {
     this.x += this.sx;
     this.y += this.sy;
-    drawCircle(this.x, this.y, 5, this.isShip ? "blue" : "red");
+    drawCircle(this.x, this.y, BULLET_RADIUS, this.isShip ? "blue" : "red");
   }
 }
 
-// (x,y)を中心に半径r、色coloroの円を描画
 function drawCircle(x, y, r, color) {
+  if (!ctx) {
+    return;
+  }
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(x, y);
@@ -92,159 +109,334 @@ function drawCircle(x, y, r, color) {
   ctx.fill();
 }
 
-const field = ref(null);
+function drawBombFlash(intensity) {
+  if (!ctx || !ship) {
+    return;
+  }
+  const baseAlpha = 0.3;
+  const maxAlpha = 0.75;
+  const overlayAlpha = baseAlpha + (maxAlpha - baseAlpha) * intensity;
 
-let ctx; // 描画コンテキスト
-let ship; // 自機
+  ctx.save();
+  ctx.globalAlpha = overlayAlpha;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.restore();
+
+  ctx.save();
+  const gradientRadius = CANVAS_SIZE * 0.6;
+  const gradient = ctx.createRadialGradient(
+    ship.x,
+    ship.y,
+    0,
+    ship.x,
+    ship.y,
+    gradientRadius
+  );
+  gradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+  const gradientAlpha = Math.min(0.9, overlayAlpha + 0.1);
+  gradient.addColorStop(0.45, "rgba(255, 255, 255, " + gradientAlpha + ")");
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = gradient;
+  ctx.fillRect(
+    ship.x - gradientRadius,
+    ship.y - gradientRadius,
+    gradientRadius * 2,
+    gradientRadius * 2
+  );
+  ctx.restore();
+}
+
+function drawShipGlow(currentShip, intensity) {
+  if (!ctx) {
+    return;
+  }
+  const glowRadius = 60 + intensity * 40;
+  const innerRadius = glowRadius * 0.4;
+  const gradient = ctx.createRadialGradient(
+    currentShip.x,
+    currentShip.y,
+    innerRadius,
+    currentShip.x,
+    currentShip.y,
+    glowRadius
+  );
+  const centerAlpha = Math.min(0.9, 0.5 + 0.4 * intensity);
+  gradient.addColorStop(0, "rgba(255, 255, 255, " + centerAlpha + ")");
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = gradient;
+  ctx.fillRect(
+    currentShip.x - glowRadius,
+    currentShip.y - glowRadius,
+    glowRadius * 2,
+    glowRadius * 2
+  );
+  ctx.restore();
+}
+
+const field = ref(null);
+let ctx;
+let ship = null;
 const shipImage = ref(null);
 const enemyImage = ref(null);
-const back = ref(null); // 背景画像
+const back = ref(null);
 const isButtonHidden = ref(false);
-let count = 0; // 敵出現用カウンタ
-let interval = 50; // 出現頻度
-let timerId; // タイマー
-let bullets = []; // 弾丸のリスト
-let bombEffect = 0; // ボムエフェクト用カウンタ
-let enemies = []; // 敵のリスト
-const stars = []; // 星のリスト
-const score = ref(0); // スコア
+let count = 0;
+let interval = 50;
+let timerId = null;
+let bullets = [];
+let bombEffect = 0;
+let enemies = [];
+const stars = [];
+const score = ref(0);
 const scoreList = ref([0, 0, 0, 0, 0]);
+const resizeCanvas = ref(null);
 
-const resizeCanvas = ref(null); //画像サイズ変更用canvas
+const pointerMoveHandler = (event) => {
+  if (!ship || !field.value) {
+    return;
+  }
+  const rect = field.value.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+  ship.move(mouseX, mouseY);
+};
+
+const clickHandler = () => {
+  if (!ship) {
+    return;
+  }
+  ship.shoot();
+};
+
+const contextMenuHandler = (event) => {
+  if (!ship) {
+    return;
+  }
+  event.preventDefault();
+  bomb();
+};
 
 const gameStart = () => {
   isButtonHidden.value = true;
-  count = 0; // 敵出現用カウンタリセット
-  interval = 50; // 出現頻度リセット
-  timerId = null; // タイマーリセット
-  bullets = []; // 弾丸のリストリセット
-  enemies = []; // 敵のリストリセット
+  count = 0;
+  interval = 50;
+  clearGameLoop();
+  bullets = [];
+  enemies = [];
+  stars.length = 0;
+  bombEffect = 0;
   score.value = 0;
-  const stars = [];
-  ship = new Ship(); // 自機オブジェクト作成
-  window.onpointermove = (e) => {
-    ship.move(e.clientX, e.clientY); // マウス移動⇒自機を移動
-  };
-  window.onclick = (e) => {
-    ship.shoot(); // マウス左クリック⇒弾丸発射
-  };
-  window.oncontextmenu = (e) => {
-    e.preventDefault(); // 右クリックメニューを無効化
-    bomb(); // ボムを発動
-  };
-  timerId = setInterval(tick, 50); // タイマー開始
-  for (let i = 0; i < 50; i++) {
-    stars.push(new Star()); // 星を作成してリストに追加
+  ship = new Ship();
+  for (let i = 0; i < STAR_COUNT; i++) {
+    stars.push(new Star());
   }
+  startGameLoop();
 };
 
-function tick() {
-  count++;
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, 600, 600);
-  ctx.drawImage(back.value, 0, 0);
-  if (bombEffect > 0) {
-    bombEffect--;
-    ctx.fillStyle = `rgba(255, 255, 255, ${bombEffect / 10})`;
-    ctx.fillRect(0, 0, 600, 600);
+function startGameLoop() {
+  clearGameLoop();
+  timerId = setInterval(tick, 50);
+}
+
+function clearGameLoop() {
+  if (timerId !== null) {
+    clearInterval(timerId);
+    timerId = null;
   }
-  stars.forEach((s) => s.tick()); // 星の移動
-  ship.tick();
-  if (count % interval == 0) {
-    enemies.push(new Enemy()); // intervalフレーム毎に敵を作成
+}
+
+function tick() {
+  if (!ctx || !ship) {
+    return;
+  }
+  count += 1;
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  if (back.value) {
+    ctx.drawImage(back.value, 0, 0);
+  }
+
+  const currentBombEffect = bombEffect;
+  let bombIntensity = 0;
+  if (currentBombEffect > 0) {
+    bombIntensity = currentBombEffect / BOMB_FLASH_FRAMES;
+    drawBombFlash(bombIntensity);
+    bombEffect -= 1;
+  }
+
+  stars.forEach((star) => star.tick());
+
+  ship.tick(bombIntensity);
+
+  if (count % interval === 0) {
+    enemies.push(new Enemy());
     interval = Math.max(5, interval - 5);
   }
+
   let gameOver = false;
-  enemies.forEach((e) => {
-    e.tick(); // 敵を移動
-    if (dist(e, ship) < 100) {
-      gameOver = true; // 敵との距離が100未満⇒ゲームオーバー
+  const activeEnemies = [];
+
+  enemies.forEach((enemy) => {
+    enemy.tick();
+    if (dist(enemy, ship) < 100) {
+      gameOver = true;
+      return;
     }
+    activeEnemies.push(enemy);
   });
-  bullets.forEach((b) => {
-    b.tick(); // 弾丸移動
-    if (!b.isShip && dist(b, ship) < 30) {
-      gameOver = true; // 弾丸との距離が30未満⇒ゲームオーバー
+  enemies = activeEnemies;
+
+  let defeatedEnemies = 0;
+  const activeBullets = [];
+
+  bullets.forEach((bullet) => {
+    bullet.tick();
+
+    if (!ship) {
+      return;
     }
+
+    if (!bullet.isShip && dist(bullet, ship) < 30) {
+      gameOver = true;
+      return;
+    }
+
+    const outOfBounds =
+      bullet.x < -BULLET_RADIUS ||
+      bullet.x > CANVAS_SIZE + BULLET_RADIUS ||
+      bullet.y < -BULLET_RADIUS ||
+      bullet.y > CANVAS_SIZE + BULLET_RADIUS;
+
+    if (outOfBounds) {
+      return;
+    }
+
+    if (bullet.isShip) {
+      const before = enemies.length;
+      enemies = enemies.filter((enemy) => dist(enemy, bullet) >= 50);
+      const defeated = before - enemies.length;
+      if (defeated > 0) {
+        defeatedEnemies += defeated;
+        return;
+      }
+    }
+
+    activeBullets.push(bullet);
   });
-  let prevNum = enemies.length;
-  enemies = enemies.filter((e) => {
-    return !bullets.some((b) => {
-      return b.isShip && dist(e, b) < 50; // 弾丸と敵の衝突判定
-    });
-  });
-  score.value += prevNum - enemies.length;
+
+  bullets = activeBullets;
+  score.value += defeatedEnemies;
   ctx.fillStyle = "yellow";
-  //ctx.fillText("SCORE:" + score, 100, 100);
 
   if (gameOver) {
-    clearInterval(timerId);
-    ctx.fillStyle = "yellow";
-    ctx.fillText("GAME OVER", 200, 200);
-    rearrangementScoreList();
-    isButtonHidden.value = false;
+    endGame();
   }
 }
-function bomb() {
-  const prevNum = enemies.length;
-  enemies = []; // 全ての敵を消去
-  score.value += prevNum; // スコアを加算
-  bombEffect = 10; // ボムエフェクトを設定
+
+function endGame() {
+  clearGameLoop();
+  if (ctx) {
+    ctx.fillStyle = "yellow";
+    ctx.fillText("GAME OVER", 200, 200);
+  }
+  rearrangementScoreList();
+  isButtonHidden.value = false;
+  ship = null;
 }
-// scoreListの更新
+
+function bomb() {
+  if (!ship) {
+    return;
+  }
+  const prevNum = enemies.length;
+  enemies = [];
+  score.value += prevNum;
+  bombEffect = BOMB_FLASH_FRAMES;
+}
+
 function rearrangementScoreList() {
   scoreList.value.push(score.value);
   scoreList.value.sort((a, b) => a - b);
   scoreList.value.shift();
 }
-// 2つのオブジェクト間の距離を求める
+
 function dist(e0, e1) {
-  return Math.sqrt(Math.abs(e0.x - e1.x) ** 2 + Math.abs(e0.y - e1.y) ** 2);
+  return Math.sqrt((e0.x - e1.x) ** 2 + (e0.y - e1.y) ** 2);
 }
 
-const choiceEnemyFile = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resizeImage(reader.result, enemyImage);
-    };
-    reader.readAsDataURL(file);
+const choiceEnemyFile = (event) => {
+  const file = event.target.files?.[0];
+  if (!file) {
+    return;
   }
+  const reader = new FileReader();
+  reader.onload = () => {
+    resizeImage(reader.result, enemyImage);
+  };
+  reader.readAsDataURL(file);
 };
 
-const choiceShipFile = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resizeImage(reader.result, shipImage);
-    };
-    reader.readAsDataURL(file);
+const choiceShipFile = (event) => {
+  const file = event.target.files?.[0];
+  if (!file) {
+    return;
   }
+  const reader = new FileReader();
+  reader.onload = () => {
+    resizeImage(reader.result, shipImage);
+  };
+  reader.readAsDataURL(file);
 };
 
 async function resizeImage(imageData, targetImage) {
   const img = new Image();
   img.src = imageData;
   await new Promise((resolve) => {
-    img.onload = () => {
-      resolve();
-    };
+    img.onload = resolve;
   });
   const aspectRatio = img.width / img.height;
   const newWidth = 134;
   const newHeight = newWidth / aspectRatio;
+  if (!resizeCanvas.value) {
+    return;
+  }
   resizeCanvas.value.width = newWidth;
   resizeCanvas.value.height = newHeight;
-  const ctx = resizeCanvas.value.getContext("2d");
-  ctx.drawImage(img, 0, 0, newWidth, newHeight);
-  targetImage.value.src = resizeCanvas.value.toDataURL("image/png");
+  const resizeContext = resizeCanvas.value.getContext("2d");
+  if (!resizeContext) {
+    return;
+  }
+  resizeContext.clearRect(0, 0, newWidth, newHeight);
+  resizeContext.drawImage(img, 0, 0, newWidth, newHeight);
+  if (targetImage.value) {
+    targetImage.value.src = resizeCanvas.value.toDataURL("image/png");
+  }
 }
 
 onMounted(() => {
+  if (!field.value) {
+    return;
+  }
   ctx = field.value.getContext("2d");
-  ctx.font = "32px 'Times New Roman'";
+  if (ctx) {
+    ctx.font = "32px 'Times New Roman'";
+  }
+  window.addEventListener("pointermove", pointerMoveHandler);
+  window.addEventListener("click", clickHandler);
+  window.addEventListener("contextmenu", contextMenuHandler);
+});
+
+onBeforeUnmount(() => {
+  clearGameLoop();
+  ship = null;
+  window.removeEventListener("pointermove", pointerMoveHandler);
+  window.removeEventListener("click", clickHandler);
+  window.removeEventListener("contextmenu", contextMenuHandler);
 });
 </script>
 <template>
